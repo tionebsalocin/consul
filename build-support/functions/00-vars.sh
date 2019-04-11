@@ -37,3 +37,6 @@ else
 fi
 
 CONSUL_BINARY_TYPE=oss
+
+# Only an enterprise build will require credentials
+CONSUL_REQUIRE_GITHUB_CREDENTIALS=0

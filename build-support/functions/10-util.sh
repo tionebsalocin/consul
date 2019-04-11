@@ -513,7 +513,7 @@ function update_git_env {
 
    export GIT_COMMIT=$(git rev-parse --short HEAD)
    export GIT_DIRTY=$(test -n "$(git status --porcelain)" && echo "+CHANGES")
-   export GIT_DESCRIBE=$(git describe --tags --always --match "v*")
+   export GIT_DESCRIBE=$(git describe --tags --always)
    export GIT_IMPORT=github.com/hashicorp/consul/version
    export GOLDFLAGS="-X ${GIT_IMPORT}.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X ${GIT_IMPORT}.GitDescribe=${GIT_DESCRIBE}"
    return 0
@@ -1005,3 +1005,18 @@ function shasum_directory {
    fi
    return 0
  }
+
+
+function github_credential_cache {
+   # Returns:
+   #   0 - success
+   #   * - failure
+   #
+   # Notes: this may prompt the user for credentials unless they are already available for git commands
+   if is_set "${CONSUL_REQUIRE_GITHUB_CREDENTIALS}"
+   then
+      git credential fill <<< "url=https://github.com" | git credential approve
+      return $?
+   fi
+   return 0
+}

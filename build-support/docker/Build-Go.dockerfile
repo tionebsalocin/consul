@@ -11,4 +11,6 @@ ARG GOTOOLS="github.com/elazarl/go-bindata-assetfs/... \
 
 RUN go get -u -v ${GOTOOLS} && mkdir -p /consul
 
+RUN git config --global credential.helper 'cache --timeout=600'
+
 WORKDIR /consul

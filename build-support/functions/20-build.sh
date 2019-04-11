@@ -322,7 +322,7 @@ function build_consul {
       extra_dir="${extra_dir_name}/"
    fi
 
-   local container_id=$(docker create -it -e CGO_ENABLED=0 ${image_name} gox -os="${XC_OS}" -arch="${XC_ARCH}" -osarch="!darwin/arm !freebsd/arm !darwin/arm64" -ldflags "${GOLDFLAGS}" -output "pkg/bin/${extra_dir}{{.OS}}_{{.Arch}}/consul" -tags="${GOTAGS}")
+   local container_id=$(docker create -it -e GOLDFLAGS="${GOLDFLAGS}" -e GOTAGS="${GOTAGS}" ${image_name} ./build-support/scripts/build-local.sh -o "${XC_OS}" -a "${XC_ARCH}")
    ret=$?
 
    if test $ret -eq 0
@@ -416,6 +416,13 @@ function build_consul_local {
    local use_gox=1
    is_set "${NOGOX}" && use_gox=0
    which gox > /dev/null || use_gox=0
+
+   github_credential_cache
+   if test $? -ne 0
+   then
+      err "ERROR: Failed to get GitHub credentials"
+      return 1
+   fi
 
    status_stage "==> Building Consul - OSes: ${build_os}, Architectures: ${build_arch}"
    mkdir pkg.bin.new 2> /dev/null
