@@ -105,6 +105,8 @@ for c in ./case-*/ ; do
       sleep $QUIESCE_SECS
     fi
 
+    docker ps -a
+
     # Execute tests
     if docker-compose up --build --abort-on-container-exit --exit-code-from verify verify ; then
       echo -n "==> CASE $CASENAME: "
