@@ -219,14 +219,17 @@ func (s *state) run() {
 	for {
 		select {
 		case <-s.ctx.Done():
+			s.logger.Printf("[DEBUG] proxycfg state[%s]: done", s.proxyID)
 			return
 		case u := <-s.ch:
+			s.logger.Printf("[DEBUG] proxycfg state[%s]: update %v", s.proxyID, u)
 			if err := s.handleUpdate(u, &snap); err != nil {
 				s.logger.Printf("[ERR] %s watch error: %s", u.CorrelationID, err)
 				continue
 			}
 
 		case <-sendCh:
+			s.logger.Printf("[DEBUG] proxycfg state[%s]: send", s.proxyID)
 			// Make a deep copy of snap so we don't mutate any of the embedded structs
 			// etc on future updates.
 			snapCopy, err := snap.Clone()
@@ -244,6 +247,7 @@ func (s *state) run() {
 			continue
 
 		case replyCh := <-s.reqCh:
+			s.logger.Printf("[DEBUG] proxycfg state[%s]: req", s.proxyID)
 			if !snap.Valid() {
 				// Not valid yet just respond with nil and move on to next task.
 				replyCh <- nil
@@ -267,6 +271,7 @@ func (s *state) run() {
 		// Check if snap is complete enough to be a valid config to deliver to a
 		// proxy yet.
 		if snap.Valid() {
+			s.logger.Printf("[DEBUG] proxycfg state[%s]: valid", s.proxyID)
 			// Don't send it right away, set a short timer that will wait for updates
 			// from any of the other cache values and deliver them all together.
 			if coalesceTimer == nil {

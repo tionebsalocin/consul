@@ -242,6 +242,8 @@ func (s *Server) process(stream ADSStream, reqCh <-chan *envoy.DiscoveryRequest)
 		return nil
 	}
 
+	s.Logger.Printf("[DEBUG] xds: starting process for proxy")
+
 	for {
 		select {
 		case <-authTimer:
@@ -249,9 +251,11 @@ func (s *Server) process(stream ADSStream, reqCh <-chan *envoy.DiscoveryRequest)
 			if err := checkStreamACLs(cfgSnap); err != nil {
 				return err
 			}
+			s.Logger.Printf("[DEBUG] xds: auth timer")
 			extendAuthTimer()
 
 		case req, ok = <-reqCh:
+			s.Logger.Printf("[DEBUG] xds: got request %v %v", req, ok)
 			if !ok {
 				// reqCh is closed when stream.Recv errors which is how we detect client
 				// going away. AFAICT the stream.Context() is only canceled once the
@@ -268,11 +272,13 @@ func (s *Server) process(stream ADSStream, reqCh <-chan *envoy.DiscoveryRequest)
 		case cfgSnap = <-stateCh:
 			// We got a new config, update the version counter
 			configVersion++
+			s.Logger.Printf("[DEBUG] xds: got snapshot version %d, %v", configVersion, cfgSnap)
 		}
 
 		// Trigger state machine
 		switch state {
 		case stateInit:
+			s.Logger.Printf("[DEBUG] xds: state init")
 			if req == nil {
 				// This can't happen (tm) since stateCh is nil until after the first req
 				// is received but lets not panic about it.
@@ -293,6 +299,7 @@ func (s *Server) process(stream ADSStream, reqCh <-chan *envoy.DiscoveryRequest)
 			// Now wait for the config so we can check ACL
 			state = statePendingInitialConfig
 		case statePendingInitialConfig:
+			s.Logger.Printf("[DEBUG] xds: state pending")
 			if cfgSnap == nil {
 				// Nothing we can do until we get the initial config
 				continue
@@ -304,6 +311,7 @@ func (s *Server) process(stream ADSStream, reqCh <-chan *envoy.DiscoveryRequest)
 			// Lets actually process the config we just got or we'll mis responding
 			fallthrough
 		case stateRunning:
+			s.Logger.Printf("[DEBUG] xds: state running")
 			// Check ACLs on every Discovery{Request,Response}.
 			if err := checkStreamACLs(cfgSnap); err != nil {
 				return err
