@@ -385,7 +385,7 @@ func (a *Agent) Start() error {
 	a.sync = ae.NewStateSyncer(a.State, c.AEInterval, a.shutdownCh, a.logger)
 
 	// create the cache
-	a.cache = cache.New(nil)
+	a.cache = cache.New(&cache.Options{Logger: a.logger})
 
 	// create the config for the rpc server/client
 	consulCfg, err := a.consulConfig()
@@ -3669,6 +3669,7 @@ func (a *Agent) registerCache() {
 		Cache:                            a.cache,
 		Datacenter:                       a.config.Datacenter,
 		TestOverrideCAChangeInitialDelay: a.config.ConnectTestCALeafRootChangeSpread,
+		Logger:                           a.logger,
 	}, &cache.RegisterOptions{
 		// Maintain a blocking query, retry dropped connections quickly
 		Refresh:        true,

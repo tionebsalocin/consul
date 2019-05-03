@@ -17,6 +17,7 @@ package cache
 import (
 	"container/heap"
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -79,6 +80,8 @@ type Cache struct {
 	stopped uint32
 	// stopCh is closed when Close is called
 	stopCh chan struct{}
+
+	logger *log.Logger
 }
 
 // typeEntry is a single type that is registered with a Cache.
@@ -119,11 +122,12 @@ type ResultMeta struct {
 // Options are options for the Cache.
 type Options struct {
 	// Nothing currently, reserved.
+	Logger *log.Logger
 }
 
 // New creates a new cache with the given RPC client and reasonable defaults.
 // Further settings can be tweaked on the returned value.
-func New(*Options) *Cache {
+func New(o *Options) *Cache {
 	// Initialize the heap. The buffer of 1 is really important because
 	// its possible for the expiry loop to trigger the heap to update
 	// itself and it'd block forever otherwise.
@@ -135,6 +139,7 @@ func New(*Options) *Cache {
 		entries:           make(map[string]cacheEntry),
 		entriesExpiryHeap: h,
 		stopCh:            make(chan struct{}),
+		logger:            o.Logger,
 	}
 
 	// Start the expiry watcher

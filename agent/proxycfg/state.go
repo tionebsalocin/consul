@@ -222,7 +222,7 @@ func (s *state) run() {
 			s.logger.Printf("[DEBUG] proxycfg state[%s]: done", s.proxyID)
 			return
 		case u := <-s.ch:
-			s.logger.Printf("[DEBUG] proxycfg state[%s]: update %v", s.proxyID, u)
+			s.logger.Printf("[DEBUG] proxycfg state[%s]: update %#v", s.proxyID, u)
 			if err := s.handleUpdate(u, &snap); err != nil {
 				s.logger.Printf("[ERR] %s watch error: %s", u.CorrelationID, err)
 				continue

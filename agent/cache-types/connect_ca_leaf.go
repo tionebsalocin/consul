@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -73,6 +74,7 @@ type ConnectCALeaf struct {
 	RPC        RPC          // RPC client for remote requests
 	Cache      *cache.Cache // Cache that has CA root certs via ConnectCARoot
 	Datacenter string       // This agent's datacenter
+	Logger     *log.Logger
 
 	// TestOverrideCAChangeInitialDelay allows overriding the random jitter after a
 	// root change with a fixed delay. So far ths is only done in tests. If it's
@@ -297,6 +299,7 @@ func (c *ConnectCALeaf) Fetch(opts cache.FetchOptions, req cache.Request) (cache
 		return result, fmt.Errorf(
 			"Internal cache failure: request wrong type: %T", req)
 	}
+	c.Logger.Printf("[DEBUG] leaf cache: req %v", reqReal)
 
 	// Do we already have a cert in the cache?
 	var existing *structs.IssuedCert
@@ -322,6 +325,7 @@ func (c *ConnectCALeaf) Fetch(opts cache.FetchOptions, req cache.Request) (cache
 
 	// Handle brand new request first as it's simplest.
 	if existing == nil {
+		c.Logger.Printf("[DEBUG] leaf cache: brand new leaf %v", reqReal)
 		return c.generateNewLeaf(reqReal, result)
 	}
 
@@ -360,6 +364,7 @@ func (c *ConnectCALeaf) Fetch(opts cache.FetchOptions, req cache.Request) (cache
 
 	if expiresAt == now || expiresAt.Before(now) {
 		// Already expired, just make a new one right away
+		c.Logger.Printf("[DEBUG] leaf cache: already expired %v", reqReal)
 		return c.generateNewLeaf(reqReal, lastResultWithNewState())
 	}
 
@@ -397,10 +402,12 @@ func (c *ConnectCALeaf) Fetch(opts cache.FetchOptions, req cache.Request) (cache
 		select {
 		case <-timeoutCh:
 			// We timed out the request with same cert.
+			c.Logger.Printf("[DEBUG] leaf cache: timeout %v", reqReal)
 			return lastResultWithNewState(), nil
 
 		case <-expiresCh:
 			// Cert expired or was force-expired by a root change.
+			c.Logger.Printf("[DEBUG] leaf cache: expired %v", reqReal)
 			return c.generateNewLeaf(reqReal, lastResultWithNewState())
 
 		case <-rootUpdateCh:
@@ -419,6 +426,7 @@ func (c *ConnectCALeaf) Fetch(opts cache.FetchOptions, req cache.Request) (cache
 			if activeRootHasKey(roots, state.authorityKeyID) {
 				// Current active CA is the same one that signed our current cert so
 				// keep waiting for a change.
+				c.Logger.Printf("[DEBUG] leaf cache: roots changed, active leaf has key %v", reqReal)
 				continue
 			}
 			state.activeRootRotationStart = time.Now()
@@ -442,6 +450,7 @@ func (c *ConnectCALeaf) Fetch(opts cache.FetchOptions, req cache.Request) (cache
 				expiresAt = state.forceExpireAfter
 				expiresCh = time.After(delay)
 			}
+			c.Logger.Printf("[DEBUG] leaf cache: roots changed, will get new leaf in %s %v", expiresAt.Sub(time.Now()), reqReal)
 			continue
 		}
 	}

@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/consul/lib/semaphore"
 
 	"golang.org/x/time/rate"
@@ -394,6 +396,11 @@ func (s *ConnectCA) Sign(
 	if !s.srv.config.ConnectEnabled {
 		return ErrConnectNotEnabled
 	}
+
+	start := time.Now()
+	reqID, _ := uuid.GenerateUUID()
+	s.srv.logger.Printf("[DEBUG] connect: Sign start %s", reqID)
+	defer s.srv.logger.Printf("[DEBUG] connect: Sign end %s took %s", reqID, time.Since(start))
 
 	if done, err := s.srv.forward("ConnectCA.Sign", args, args, reply); done {
 		return err

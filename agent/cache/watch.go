@@ -88,6 +88,11 @@ func (c *Cache) notifyBlockingQuery(ctx context.Context, t string, r Request, co
 		// Blocking request
 		res, meta, err := c.getWithIndex(t, r, index)
 
+		// Hack use the pointer address of the context's done channel as an ID to
+		// correlate logs for this watcher.
+		ctxChan := ctx.Done()
+		c.logger.Printf("[DEBUG] watch[%p] got res=%#v err=%#v", &ctxChan, res, err)
+
 		// Check context hasn't been canceled
 		if ctx.Err() != nil {
 			return
@@ -99,6 +104,7 @@ func (c *Cache) notifyBlockingQuery(ctx context.Context, t string, r Request, co
 			u := UpdateEvent{correlationID, res, meta, err}
 			select {
 			case ch <- u:
+				c.logger.Printf("[DEBUG] watch[%p] SENT res=%#v err=%#v", &ctxChan, res, err)
 			case <-ctx.Done():
 				return
 			}
