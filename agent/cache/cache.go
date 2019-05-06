@@ -257,6 +257,10 @@ RETRY_GET:
 	entry, ok := c.entries[key]
 	c.entriesLock.RUnlock()
 
+	if ok && !entry.Valid {
+		c.logger.Printf("[DEBUG] cache: ")
+	}
+
 	// Check if we have a hit
 	cacheHit := ok && entry.Valid
 
@@ -284,7 +288,9 @@ RETRY_GET:
 		cacheHit = false
 	}
 
-	c.logger.Printf("[DEBUG] cache: cache miss for %q - %v", t, r)
+	if !cacheHit {
+		c.logger.Printf("[DEBUG] cache: cache miss for %q - %v", t, r)
+	}
 
 	if cacheHit {
 		meta := ResultMeta{Index: entry.Index}
@@ -395,7 +401,7 @@ func (c *Cache) entryKey(t string, r *RequestInfo) string {
 // If allowNew is true then the fetch should create the cache entry
 // if it doesn't exist. If this is false, then fetch will do nothing
 // if the entry doesn't exist. This latter case is to support refreshing.
-func (c *Cache) fetch(t, key string, r Request, allowNew bool, attempt uint, minIndex uint64) (<-chan struct{}, error) {
+func (c *Cache) fetch(t, key string, r Request, allowNew bool, attempt uint) (<-chan struct{}, error) {
 	// Get the type that we're fetching
 	c.typesLock.RLock()
 	tEntry, ok := c.types[t]
@@ -417,8 +423,6 @@ func (c *Cache) fetch(t, key string, r Request, allowNew bool, attempt uint, min
 		close(ch)
 		return ch, nil
 	}
-
-	if ok && entry.Index
 
 	// If we already have an entry and it is actively fetching, then return
 	// the currently active waiter.
