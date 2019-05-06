@@ -288,6 +288,7 @@ func (s *Server) process(stream ADSStream, reqCh <-chan *envoy.DiscoveryRequest)
 			proxyID = req.Node.Id
 
 			// Start watching config for that proxy
+			s.Logger.Printf("[DEBUG] xds: watching proxy %s", proxyID)
 			stateCh, watchCancel = s.CfgMgr.Watch(proxyID)
 			// Note that in this case we _intend_ the defer to only be triggered when
 			// this whole process method ends (i.e. when streaming RPC aborts) not at

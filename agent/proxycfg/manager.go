@@ -191,10 +191,13 @@ func (m *Manager) ensureProxyServiceLocked(ns *structs.NodeService, token string
 
 	// Start a goroutine that will wait for changes and broadcast them to watchers.
 	go func(ch <-chan ConfigSnapshot) {
+		m.Logger.Printf("[DEBUG] proxycfg manager: running notifier routine for %s", ns.ID)
 		// Run until ch is closed
 		for snap := range ch {
+			m.Logger.Printf("[DEBUG] proxycfg manager: notifying about update for %s", ns.ID)
 			m.notify(&snap)
 		}
+		m.Logger.Printf("[DEBUG] proxycfg manager: done running notifier routine for %s", ns.ID)
 	}(ch)
 
 	return nil
@@ -224,6 +227,7 @@ func (m *Manager) notify(snap *ConfigSnapshot) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.Logger.Printf("[DEBUG] proxycfg manager: notify snapshot %#v", snap)
 	watchers, ok := m.watchers[snap.ProxyID]
 	if !ok {
 		return
@@ -246,6 +250,7 @@ func (m *Manager) deliverLatest(snap *ConfigSnapshot, ch chan *ConfigSnapshot) {
 	default:
 	}
 
+	m.Logger.Printf("[DEBUG] proxycfg: need to drain chan")
 	// Not empty, drain the chan of older snapshots and redeliver. For now we only
 	// use 1-buffered chans but this will still work if we change that later.
 OUTER:
@@ -278,6 +283,8 @@ func (m *Manager) Watch(proxyID string) (<-chan *ConfigSnapshot, CancelFunc) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.Logger.Printf("[DEBUG] proxycfg manager: watching %s", proxyID)
+
 	// This buffering is crucial otherwise we'd block immediately trying to
 	// deliver the current snapshot below if we already have one.
 	ch := make(chan *ConfigSnapshot, 1)
@@ -289,6 +296,8 @@ func (m *Manager) Watch(proxyID string) (<-chan *ConfigSnapshot, CancelFunc) {
 	watchers[idx] = ch
 	m.watchers[proxyID] = watchers
 
+	m.Logger.Printf("[DEBUG] proxycfg manager: watching %s - index: %d", proxyID, idx)
+
 	// Deliver the current snapshot immediately if there is one ready
 	if state, ok := m.proxies[proxyID]; ok {
 		if snap := state.CurrentSnapshot(); snap != nil {
@@ -296,7 +305,11 @@ func (m *Manager) Watch(proxyID string) (<-chan *ConfigSnapshot, CancelFunc) {
 			// anywhere so we must be the only writer so this will never block and
 			// deadlock.
 			ch <- snap
+		} else {
+			m.Logger.Printf("[DEBUG] proxycfg manager: nil snapshot for proxy: %s", proxyID)
 		}
+	} else {
+		m.Logger.Printf("[DEBUG] proxycfg manager: no state for proxy: %s", proxyID)
 	}
 
 	return ch, func() {

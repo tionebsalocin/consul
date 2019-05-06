@@ -249,6 +249,7 @@ func (s *state) run() {
 		case replyCh := <-s.reqCh:
 			s.logger.Printf("[DEBUG] proxycfg state[%s]: req", s.proxyID)
 			if !snap.Valid() {
+				s.logger.Printf("[DEBUG] proxycfg state[%s]: snap is invalid", s.proxyID)
 				// Not valid yet just respond with nil and move on to next task.
 				replyCh <- nil
 				continue
@@ -282,6 +283,8 @@ func (s *state) run() {
 					sendCh <- struct{}{}
 				})
 			}
+		} else {
+			s.logger.Printf("[DEBUG] proxycfg state[%s]: still invalid: %#v", s.proxyID, snap)
 		}
 	}
 }

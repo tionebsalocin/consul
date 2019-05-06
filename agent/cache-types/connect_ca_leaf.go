@@ -490,6 +490,7 @@ func (c *ConnectCALeaf) rootsFromCache() (*structs.IndexedCARoots, error) {
 func (c *ConnectCALeaf) generateNewLeaf(req *ConnectCALeafRequest,
 	result cache.FetchResult) (cache.FetchResult, error) {
 
+	c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf start")
 	var state fetchState
 	if result.State != nil {
 		var ok bool
@@ -502,11 +503,14 @@ func (c *ConnectCALeaf) generateNewLeaf(req *ConnectCALeafRequest,
 
 	// Need to lookup RootCAs response to discover trust domain. This should be a
 	// cache hit.
+	c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf getting roots from cache")
 	roots, err := c.rootsFromCache()
 	if err != nil {
+		c.Logger.Printf("[DEBUG leaf cache: generateNewLeaf errored when getting roots from cache")
 		return result, err
 	}
 	if roots.TrustDomain == "" {
+		c.Logger.Printf("[DEBUG] leaf cache: CA not bootstrapped yet")
 		return result, errors.New("cluster has no CA bootstrapped yet")
 	}
 
@@ -519,12 +523,14 @@ func (c *ConnectCALeaf) generateNewLeaf(req *ConnectCALeafRequest,
 	}
 
 	// Create a new private key
+	c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf generating private key")
 	pk, pkPEM, err := connect.GeneratePrivateKey()
 	if err != nil {
 		return result, err
 	}
 
 	// Create a CSR.
+	c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf creating csr")
 	csr, err := connect.CreateCSR(serviceID, pk)
 	if err != nil {
 		return result, err
@@ -537,7 +543,9 @@ func (c *ConnectCALeaf) generateNewLeaf(req *ConnectCALeafRequest,
 		Datacenter:   req.Datacenter,
 		CSR:          csr,
 	}
+	c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf Issuing ConnectCA.Sign request")
 	if err := c.RPC.RPC("ConnectCA.Sign", &args, &reply); err != nil {
+		c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf ConnectCA.Sign errored: %v", err)
 		if err.Error() == consul.ErrRateLimited.Error() {
 			if result.Value == nil {
 				// This was a first fetch - we have no good value in cache. In this case
@@ -581,6 +589,7 @@ func (c *ConnectCALeaf) generateNewLeaf(req *ConnectCALeafRequest,
 		}
 		return result, err
 	}
+	c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf RPC finished")
 	reply.PrivateKeyPEM = pkPEM
 
 	// Reset rotation state
@@ -588,6 +597,7 @@ func (c *ConnectCALeaf) generateNewLeaf(req *ConnectCALeafRequest,
 	state.consecutiveRateLimitErrs = 0
 	state.activeRootRotationStart = time.Time{}
 
+	c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf parsing pem cert")
 	cert, err := connect.ParseCert(reply.CertPEM)
 	if err != nil {
 		return result, err
@@ -600,6 +610,7 @@ func (c *ConnectCALeaf) generateNewLeaf(req *ConnectCALeafRequest,
 	// state in Fetch.
 	result.State = state
 	result.Index = reply.ModifyIndex
+	c.Logger.Printf("[DEBUG] leaf cache: generateNewLeaf done")
 	return result, nil
 }
 

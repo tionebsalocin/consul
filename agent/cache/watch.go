@@ -53,6 +53,7 @@ type UpdateEvent struct {
 func (c *Cache) Notify(ctx context.Context, t string, r Request,
 	correlationID string, ch chan<- UpdateEvent) error {
 
+	c.logger.Printf("[DEBUG] cache: Notify - Type: %s, Key: %s, CorrelationID: %s", t, r.CacheInfo().Key, correlationID)
 	// Get the type that we're fetching
 	c.typesLock.RLock()
 	tEntry, ok := c.types[t]
@@ -61,12 +62,14 @@ func (c *Cache) Notify(ctx context.Context, t string, r Request,
 		return fmt.Errorf("unknown type in cache: %s", t)
 	}
 	if tEntry.Type.SupportsBlocking() {
+		c.logger.Printf("[DEBUG] cache: starting background blocking query - Type: %s, Key: %s, CorrelationID: %s", t, r.CacheInfo().Key, correlationID)
 		go c.notifyBlockingQuery(ctx, t, r, correlationID, ch)
 	} else {
 		info := r.CacheInfo()
 		if info.MaxAge == 0 {
 			return fmt.Errorf("Cannot use Notify for polling cache types without specifying the MaxAge")
 		}
+		c.logger.Printf("[DEBUG] cache: starting background polling query - Type: %s, Key: %s, CorrelationID: %s", t, r.CacheInfo().Key, correlationID)
 		go c.notifyPollingQuery(ctx, t, r, correlationID, ch, info.MaxAge)
 	}
 
@@ -86,7 +89,9 @@ func (c *Cache) notifyBlockingQuery(ctx context.Context, t string, r Request, co
 		}
 
 		// Blocking request
+		c.logger.Printf("[DEBUG] cache: issuing getWithIndex - Type: %s, Key: %s, CorrelationID: %s, Index: %d", t, r.CacheInfo().Key, correlationID, index)
 		res, meta, err := c.getWithIndex(t, r, index)
+		c.logger.Printf("[DEBUG] cache: getWithIndex done - Type: %s, Key: %s, CorrelationID: %s, New Index: %d", t, r.CacheInfo().Key, correlationID, meta.Index)
 
 		// Hack use the pointer address of the context's done channel as an ID to
 		// correlate logs for this watcher.
@@ -95,17 +100,20 @@ func (c *Cache) notifyBlockingQuery(ctx context.Context, t string, r Request, co
 
 		// Check context hasn't been canceled
 		if ctx.Err() != nil {
+			c.logger.Printf("[DEBUG] cache: ctx cancelled - Type: %s, Key: %s, CorrelationID: %s", t, r.CacheInfo().Key, correlationID)
 			return
 		}
 
 		// Check the index of the value returned in the cache entry to be sure it
 		// changed
 		if index == 0 || index < meta.Index {
+			c.logger.Printf("[DEBUG] watch[%p] SENDING res=%#v err=%#v", &ctxChan, res, err)
 			u := UpdateEvent{correlationID, res, meta, err}
 			select {
 			case ch <- u:
-				c.logger.Printf("[DEBUG] watch[%p] SENT res=%#v err=%#v", &ctxChan, res, err)
+				c.logger.Printf("[DEBUG] watch[%p] SENT %#v", &ctxChan, u)
 			case <-ctx.Done():
+				c.logger.Printf("[DEBUG] cache: done? - Type: %s, Key: %s, CorrelationID: %s", t, r.CacheInfo().Key, correlationID)
 				return
 			}
 
@@ -120,6 +128,9 @@ func (c *Cache) notifyBlockingQuery(ctx context.Context, t string, r Request, co
 		if err == nil && meta.Index > 0 {
 			failures = 0
 		} else {
+			if meta.Index == 0 {
+				c.logger.Printf("[DEBUG] cache: meta.Index is 0 - Type: %s, Key: %s, CorrelationID: %s", t, r.CacheInfo().Key, correlationID)
+			}
 			failures++
 			wait = backOffWait(failures)
 		}
