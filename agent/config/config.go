@@ -99,7 +99,7 @@ func Parse(data string, format string) (c Config, err error) {
 		"service.connect.sidecar_service.proxy.upstreams",
 		"services.connect.sidecar_service.proxy.upstreams",
 
-		"config_entries.bootstrap",
+		"central_config.bootstrap",
 	})
 
 	// There is a difference of representation of some fields depending on
@@ -187,7 +187,7 @@ type Config struct {
 	CheckUpdateInterval              *string                  `json:"check_update_interval,omitempty" hcl:"check_update_interval" mapstructure:"check_update_interval"`
 	Checks                           []CheckDefinition        `json:"checks,omitempty" hcl:"checks" mapstructure:"checks"`
 	ClientAddr                       *string                  `json:"client_addr,omitempty" hcl:"client_addr" mapstructure:"client_addr"`
-	ConfigEntries                    ConfigEntries            `json:"config_entries,omitempty" hcl:"config_entries" mapstructure:"config_entries"`
+	CentralConfig                    CentralConfig            `json:"central_config,omitempty" hcl:"central_config" mapstructure:"central_config"`
 	Connect                          Connect                  `json:"connect,omitempty" hcl:"connect" mapstructure:"connect"`
 	DNS                              DNS                      `json:"dns_config,omitempty" hcl:"dns_config" mapstructure:"dns_config"`
 	DNSDomain                        *string                  `json:"domain,omitempty" hcl:"domain" mapstructure:"domain"`
@@ -205,7 +205,6 @@ type Config struct {
 	DiscoveryMaxStale                *string                  `json:"discovery_max_stale" hcl:"discovery_max_stale" mapstructure:"discovery_max_stale"`
 	EnableACLReplication             *bool                    `json:"enable_acl_replication,omitempty" hcl:"enable_acl_replication" mapstructure:"enable_acl_replication"`
 	EnableAgentTLSForChecks          *bool                    `json:"enable_agent_tls_for_checks,omitempty" hcl:"enable_agent_tls_for_checks" mapstructure:"enable_agent_tls_for_checks"`
-	EnableCentralServiceConfig       *bool                    `json:"enable_central_service_config,omitempty" hcl:"enable_central_service_config" mapstructure:"enable_central_service_config"`
 	EnableDebug                      *bool                    `json:"enable_debug,omitempty" hcl:"enable_debug" mapstructure:"enable_debug"`
 	EnableScriptChecks               *bool                    `json:"enable_script_checks,omitempty" hcl:"enable_script_checks" mapstructure:"enable_script_checks"`
 	EnableLocalScriptChecks          *bool                    `json:"enable_local_script_checks,omitempty" hcl:"enable_local_script_checks" mapstructure:"enable_local_script_checks"`
@@ -656,11 +655,14 @@ type Tokens struct {
 	Agent       *string `json:"agent,omitempty" hcl:"agent" mapstructure:"agent"`
 }
 
-type ConfigEntries struct {
+type CentralConfig struct {
+	// Enabled when set will cause service registrations to look for the global defaults and apply them to the local service registration
+	Enabled *bool `json:enabled,omitempty" hcl:"enabled" mapstructure:"enabled"`
+
 	// Bootstrap is the list of config_entries that should only be persisted to
 	// cluster on initial startup of a new leader if no such config exists
 	// already. The type is map not structs.ConfigEntry for decoding reasons - we
 	// need to figure out the right concrete type before we can decode it
-	// unabiguously.
+	// unambiguously.
 	Bootstrap []map[string]interface{} `json:"bootstrap,omitempty" hcl:"bootstrap" mapstructure:"bootstrap"`
 }

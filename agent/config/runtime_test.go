@@ -2701,7 +2701,7 @@ func TestConfigFlagsAndEdgecases(t *testing.T) {
 			desc: "ConfigEntry bootstrap doesn't parse",
 			args: []string{`-data-dir=` + dataDir},
 			json: []string{`{
-				"config_entries": {
+				"central_config": {
 					"bootstrap": [
 						{
 							"foo": "bar"
@@ -2710,18 +2710,18 @@ func TestConfigFlagsAndEdgecases(t *testing.T) {
 				}
 			}`},
 			hcl: []string{`
-			config_entries {
+			central_config {
 				bootstrap {
 					foo = "bar"
 				}
 			}`},
-			err: "config_entries.bootstrap[0]: Payload does not contain a Kind",
+			err: "central_config.bootstrap[0]: Payload does not contain a Kind",
 		},
 		{
 			desc: "ConfigEntry bootstrap unknown kind",
 			args: []string{`-data-dir=` + dataDir},
 			json: []string{`{
-				"config_entries": {
+				"central_config": {
 					"bootstrap": [
 						{
 							"kind": "foo",
@@ -2732,20 +2732,20 @@ func TestConfigFlagsAndEdgecases(t *testing.T) {
 				}
 			}`},
 			hcl: []string{`
-			config_entries {
+			central_config {
 				bootstrap {
 					kind = "foo"
 					name = "bar"
 					baz = 1
 				}
 			}`},
-			err: "config_entries.bootstrap[0]: invalid config entry kind: foo",
+			err: "central_config.bootstrap[0]: invalid config entry kind: foo",
 		},
 		{
 			desc: "ConfigEntry bootstrap invalid",
 			args: []string{`-data-dir=` + dataDir},
 			json: []string{`{
-				"config_entries": {
+				"central_config": {
 					"bootstrap": [
 						{
 							"kind": "proxy-defaults",
@@ -2758,7 +2758,7 @@ func TestConfigFlagsAndEdgecases(t *testing.T) {
 				}
 			}`},
 			hcl: []string{`
-			config_entries {
+			central_config {
 				bootstrap {
 					kind = "proxy-defaults"
 					name = "invalid-name"
@@ -2767,7 +2767,7 @@ func TestConfigFlagsAndEdgecases(t *testing.T) {
 					}
 				}
 			}`},
-			err: "config_entries.bootstrap[0]: invalid name (\"invalid-name\"), only \"global\" is supported",
+			err: "central_config.bootstrap[0]: invalid name (\"invalid-name\"), only \"global\" is supported",
 		},
 	}
 
@@ -3084,7 +3084,8 @@ func TestFullConfig(t *testing.T) {
 			],
 			"check_update_interval": "16507s",
 			"client_addr": "93.83.18.19",
-			"config_entries": {
+			"central_config": {
+				"enabled": true,
 				"bootstrap": [
 					{
 						"kind": "proxy-defaults",
@@ -3162,7 +3163,6 @@ func TestFullConfig(t *testing.T) {
 			},
 			"enable_acl_replication": true,
 			"enable_agent_tls_for_checks": true,
-			"enable_central_service_config": true,
 			"enable_debug": true,
 			"enable_script_checks": true,
 			"enable_local_script_checks": true,
@@ -3650,7 +3650,8 @@ func TestFullConfig(t *testing.T) {
 			]
 			check_update_interval = "16507s"
 			client_addr = "93.83.18.19"
-			config_entries {
+			central_config {
+				enabled = true
 				# This is using the repeated block-to-array HCL magic
 				bootstrap {
 					kind = "proxy-defaults"
@@ -3731,7 +3732,6 @@ func TestFullConfig(t *testing.T) {
 			}
 			enable_acl_replication = true
 			enable_agent_tls_for_checks = true
-			enable_central_service_config = true
 			enable_debug = true
 			enable_script_checks = true
 			enable_local_script_checks = true

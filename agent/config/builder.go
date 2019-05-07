@@ -640,14 +640,14 @@ func (b *Builder) Build() (rt RuntimeConfig, err error) {
 
 	var configEntries []structs.ConfigEntry
 
-	if len(c.ConfigEntries.Bootstrap) > 0 {
-		for i, rawEntry := range c.ConfigEntries.Bootstrap {
+	if len(c.CentralConfig.Bootstrap) > 0 {
+		for i, rawEntry := range c.CentralConfig.Bootstrap {
 			entry, err := structs.DecodeConfigEntry(rawEntry)
 			if err != nil {
-				return RuntimeConfig{}, fmt.Errorf("config_entries.bootstrap[%d]: %s", i, err)
+				return RuntimeConfig{}, fmt.Errorf("central_config.bootstrap[%d]: %s", i, err)
 			}
 			if err := entry.Validate(); err != nil {
-				return RuntimeConfig{}, fmt.Errorf("config_entries.bootstrap[%d]: %s", i, err)
+				return RuntimeConfig{}, fmt.Errorf("central_config.bootstrap[%d]: %s", i, err)
 			}
 			configEntries = append(configEntries, entry)
 		}
@@ -815,7 +815,7 @@ func (b *Builder) Build() (rt RuntimeConfig, err error) {
 		DiscardCheckOutput:                      b.boolVal(c.DiscardCheckOutput),
 		DiscoveryMaxStale:                       b.durationVal("discovery_max_stale", c.DiscoveryMaxStale),
 		EnableAgentTLSForChecks:                 b.boolVal(c.EnableAgentTLSForChecks),
-		EnableCentralServiceConfig:              b.boolVal(c.EnableCentralServiceConfig),
+		EnableCentralServiceConfig:              b.boolVal(c.CentralConfig.Enabled),
 		EnableDebug:                             b.boolVal(c.EnableDebug),
 		EnableRemoteScriptChecks:                enableRemoteScriptChecks,
 		EnableLocalScriptChecks:                 enableLocalScriptChecks,

@@ -816,20 +816,24 @@ default will automatically work with some tooling.
 * <a name="client_addr"></a><a href="#client_addr">`client_addr`</a> Equivalent to the
   [`-client` command-line flag](#_client).
 
-* <a name="config_entries"></a><a href="#config_entries">`config_entries`</a>
+* <a name="central_config"></a><a href="#central_config">`central_config`</a>
     This object allows setting options for centralized config entries.
 
     The following sub-keys are available:
 
+    * <a name="enabled"></a><a href="#central_config_enabled">`enabled`</a>
+      When set, the Consul agent will look for any centralized service configurations that match a registering service instance.
+      If it finds any, the agent will merge the centralized defaults with the service instance configuration. This allows for
+      things like service protocol or proxy configuration to be defined centrally and inherited by any
+      affected service registrations.
+
     * <a name="bootstrap"></a><a href="#config_entries_bootstrap">`bootstrap`</a>
-        This object allows configuring centralized config entries to be bootstrapped
-        by the leader. These entries will be reloaded during an agent config reload.
-
-        The following sub-keys are available:
-
-        * <a name="proxy_defaults"></a><a href="#config_entries_bootstrap_proxy_defaults">`proxy_defaults`</a>
-          This object should contain a mapping of config entry names to an opaque proxy configuration mapping.
-          Currently the only supported name is `global`
+        This is a list of inlined config entries to insert into Raft when the Consul server
+        gains leadership. This option is not applicable to non-server nodes. Each bootstrap
+        entry will be created only if it does not exist. When reloading any newly entries
+        that have been added to the configuration will be processed. See the
+        centralized configuration docs for more details about the
+        contents of each entry.
 
 * <a name="connect"></a><a href="#connect">`connect`</a>
     This object allows setting options for the Connect feature.
@@ -1118,14 +1122,6 @@ default will automatically work with some tooling.
   When set, uses a subset of the agent's TLS configuration (`key_file`, `cert_file`, `ca_file`, `ca_path`, and
   `server_name`) to set up the client for HTTP or gRPC health checks. This allows services requiring 2-way TLS to
   be checked using the agent's credentials. This was added in Consul 1.0.1 and defaults to false.
-
-* <a name="enable_central_service_config"></a><a href="#enable_central_service_config">`enable_central_service_config`</a>
-  When set, the Consul agent will look for any centralized service configurations that match a registering service instance. 
-  If it finds any, the agent will merge the centralized defaults with the service instance configuration. This allows for 
-  things like service protocol or proxy configuration to be defined centrally and inherited by any
-  affected service registrations.
-  
-  
 
 * <a name="enable_debug"></a><a href="#enable_debug">`enable_debug`</a> When set, enables some
   additional debugging features. Currently, this is only used to access runtime profiling HTTP endpoints, which
