@@ -3,7 +3,7 @@ version: 2
 
 references:
   images:
-    go: &GOLANG_IMAGE circleci/golang:1.12.1
+    go: &GOLANG_IMAGE circleci/golang:1.10
     middleman: &MIDDLEMAN_IMAGE hashicorp/middleman-hashicorp:0.3.35
     ember: &EMBER_IMAGE circleci/node:8-browsers
 
@@ -15,6 +15,7 @@ references:
     rubygem: &RUBYGEM_CACHE_KEY static-site-gems-v1-{{ checksum "Gemfile.lock" }}
 
   environment: &ENVIRONMENT
+    GO111MODULE: on
     TEST_RESULTS_DIR: *TEST_RESULTS_DIR
     GOTESTSUM_RELEASE: 0.3.3
     EMAIL: noreply@hashicorp.com
@@ -95,8 +96,12 @@ jobs:
   dev-build:
     docker:
       - image: *GOLANG_IMAGE
+    environment:
+      <<: *ENVIRONMENT
+    working_directory: /go/src/github.com/hashicorp/consul
     steps:
       - checkout
+      - run: go version
       - run: make dev
 
       # save dev build to pass to downstream jobs
